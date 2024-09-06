@@ -39,8 +39,6 @@ const deleteUser = async (req, res) => {
     const id = req.params.id;
     try {
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
-        await pool.end();
-        connector.close();
         res.status(200).send('User deleted successfully');
     } catch (error) {
         console.error('Error in deleting user:', error);
@@ -48,4 +46,16 @@ const deleteUser = async (req, res) => {
     }
 }
 
-module.exports = { getUsers, deleteUser };
+const updateLocation = async (req, res) => {
+    const id = req.params.id;
+    const { latitude, longitude } = req.body;
+    try {
+        await pool.query('UPDATE users SET latitude = $1, longitude = $2 WHERE user_id = $3', [latitude, longitude, id]);
+        res.status(200).send('Location updated successfully');
+    } catch (error) {
+        console.error('Error in updating location:', error);
+        res.status(500).send('Server error during updating location');
+    }
+}
+
+module.exports = { getUsers, deleteUser, updateLocation };

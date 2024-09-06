@@ -39,9 +39,12 @@ const register = async (req, res) => {
       [email, name, hashedPassword, phone]
     );
 
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+
     // Generate a JWT token
     const token = jwt.sign({ username: email }, process.env.JWT_SECRET, { expiresIn: '3600h' });
     res.json({ token: token, user: {
+        id: result.rows[0].id,
         email: email,
         name: name,
         phone: phone,
@@ -70,10 +73,10 @@ const login = async (req, res) => {
     if (!match) {
       return res.status(401).send('Invalid password');
     }
-
     // Generate a JWT token
     const token = jwt.sign({ username: email }, process.env.JWT_SECRET, { expiresIn: '3600h' });
     res.json({ token: token, user: {
+        id: user.id,
         email: email,
         name: user.name,
         phone: user.phone_number,
@@ -85,6 +88,10 @@ const login = async (req, res) => {
   }
 };
 
+const verifyToken = (req, res) => {
+    res.status(200).json({ message: 'Token is valid', user: req.user });
+  };
+
 // Close pool and connector on application exit (optional)
 process.on('exit', async () => {
   await pool.end();
@@ -94,4 +101,5 @@ process.on('exit', async () => {
 module.exports = {
   register,
   login,
+  verifyToken
 };

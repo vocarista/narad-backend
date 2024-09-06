@@ -41,20 +41,42 @@ const createReport = async (req, res) => {
 
 const getReports = async (req, res) => {
     const { latitude, longitude, radius } = req.query;
+  
     try {
-        if(!latitude || !longitude || !radius) {
-            const results = await pool.query('SELECT * FROM reports');
-        } else {
-            const result = await pool.query("SELECT * FROM reports WHERE earth_box(ll_to_earth($1, $2), $3) @> ll_to_earth(latitude, longitude)", [latitude, longitude, radius]);
-        }
-        const reports = result.rows;
+      let result;
+      if (!latitude || !longitude || !radius) {
+        // Fetch all reports if parameters are missing
+        result = await pool.query('SELECT * FROM reports');
+      } else {
+        // Fetch reports within a certain radius
+        result = await pool.query(
+          "SELECT * FROM reports WHERE earth_box(ll_to_earth($1, $2), $3) @> ll_to_earth(latitude, longitude)",
+          [latitude, longitude, radius]
+        );
+      }
+  
+      const reports = result.rows;
+      
+      // Send the response with the fetched reports
+      res.status(200).json(reports);
+  
+    } catch (error) {
+      console.error('Error in getting reports:', error);
+      res.status(500).send('Server error during getting reports');
+    }
+  };
+  
+const deleteReport = async (req, res) => {
+    const id = req.params.id;
+    try {
+        await pool.query('DELETE FROM reports WHERE id = $1', [id]);
         await pool.end();
         connector.close();
-        res.status(200).json(reports);
+        res.status(200).send('Report deleted successfully');
     } catch (error) {
-        console.error('Error in getting reports:', error);
-        res.status(500).send('Server error during getting reports');
+        console.error('Error in deleting report:', error);
+        res.status(500).send('Server error during deleting report');
     }
 }
 
-module.exports = { createReport, getReports };
+module.exports = { createReport, getReports, deleteReport };
