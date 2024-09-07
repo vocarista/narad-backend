@@ -28,17 +28,14 @@ const createReport = async (req, res) => {
     const { user_id, report } = req.body;
     try {
         const { title, description, severity, type, affectedArea, latitude, longitude } = report;
-        const result = await pool.query("INSERT INTO reports (user_id, title, description, created_at, incident_severity, incident_type, affected_area, latitude, longitude) VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8) RETURNING *", [user_id, title, description, severity, type, affectedArea, latitude, longitude]);
+        const result = await pool.query("INSERT INTO reports (user_id, title, description, created_at, incident_severity, incident_type, affected_area, latitude, longitude, upvotes) VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8, $9) RETURNING *", [user_id, title, description, severity, type, affectedArea, latitude, longitude, 1]);
         const newReport = result.rows[0];
-        await pool.end();
-        connector.close();
         res.status(201).json(newReport);
     } catch (error) {
         console.error('Error in creating report:', error);
         res.status(500).send('Server error during creating report');
     }
 }
-
 const getReports = async (req, res) => {
     const { latitude, longitude, radius } = req.query;
   
@@ -48,16 +45,20 @@ const getReports = async (req, res) => {
         // Fetch all reports if parameters are missing
         result = await pool.query('SELECT * FROM reports');
       } else {
+        // Convert latitude and longitude to float
+        const lat = parseFloat(latitude);
+        const long = parseFloat(longitude);
+        const rad = parseFloat(radius);
+  
         // Fetch reports within a certain radius
         result = await pool.query(
           "SELECT * FROM reports WHERE earth_box(ll_to_earth($1, $2), $3) @> ll_to_earth(latitude, longitude)",
-          [latitude, longitude, radius]
+          [lat, long, rad]
         );
       }
   
       const reports = result.rows;
-      
-      // Send the response with the fetched reports
+  
       res.status(200).json(reports);
   
     } catch (error) {
@@ -66,12 +67,11 @@ const getReports = async (req, res) => {
     }
   };
   
+  
 const deleteReport = async (req, res) => {
     const id = req.params.id;
     try {
         await pool.query('DELETE FROM reports WHERE id = $1', [id]);
-        await pool.end();
-        connector.close();
         res.status(200).send('Report deleted successfully');
     } catch (error) {
         console.error('Error in deleting report:', error);
@@ -79,4 +79,26 @@ const deleteReport = async (req, res) => {
     }
 }
 
-module.exports = { createReport, getReports, deleteReport };
+const upvote = async (req, res) => {
+    const id = req.params.id;
+    try {
+        await pool.query('UPDATE reports SET upvotes = upvotes + 1 WHERE report_id = $1', [id]);
+        res.status(200).send('Upvoted successfully');
+    } catch (error) {
+        console.error('Error in upvoting report:', error);
+        res.status(500).send('Server error during upvoting report');
+    }
+}
+
+const downvote = async (req, res) => {
+    const id = req.paarams.id;
+    try {
+        await pool.query('UPDATE reports SET upvotes = upvotes - 1 WHERE report_id = $1', [id]);
+        res.status(200).send('Downvoted successfully');
+    } catch (error) {
+        console.error('Error in downvoting report:', error);
+        res.status(500).send('Server error during downvoting report');
+    }
+}
+
+module.exports = { createReport, getReports, deleteReport, upvote, downvote }

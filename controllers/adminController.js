@@ -36,14 +36,12 @@ const adminLogin = async (req, res) => {
         if (!user) {
         return res.status(400).send('Invalid credentials');
         }
-    
-        await pool.end();
-        connector.close();
         // Check if the password is correct
         if (await bcrypt.compare(password, user.password)) {
         // Generate a JWT token
         const token = jwt.sign({ username: email }, process.env.JWT_SECRET, { expiresIn: '3600h' });
         res.json({ token: token, user: {
+            id: user.id,
             email: email,
             name: user.name,
             phone: user.phone,

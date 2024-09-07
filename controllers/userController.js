@@ -26,8 +26,6 @@ const getUsers = async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM users');
         const users = result.rows;
-        await pool.end();
-        connector.close();
         res.status(200).json(users);
     } catch (error) {
         console.error('Error in getting users:', error);

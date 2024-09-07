@@ -33,6 +33,11 @@ const register = async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+
+    const found = await pool.query('SELECT * FROM users WHERE email = $1', [email]) 
+    if(found.rows) {
+        return res.status(403).send('User already exists')
+    }
     // Insert the new user into the database
     await pool.query(
       'INSERT INTO users (email, name, password, phone_number) VALUES ($1, $2, $3, $4)',
@@ -92,11 +97,6 @@ const verifyToken = (req, res) => {
     res.status(200).json({ message: 'Token is valid', user: req.user });
   };
 
-// Close pool and connector on application exit (optional)
-process.on('exit', async () => {
-  await pool.end();
-  connector.close();
-});
 
 module.exports = {
   register,
